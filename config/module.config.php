@@ -17,6 +17,7 @@ use LaminasAttributeController\Security\GetCurrentUser;
 use LaminasAttributeController\Security\GuardListener;
 use LaminasAttributeController\Security\NullCurrentUser;
 use LaminasAttributeController\Validation\DefaultValueResolver;
+use LaminasAttributeController\Validation\MapQueryStringResolver;
 use LaminasAttributeController\Validation\MapRequestPayloadResolver;
 use LaminasAttributeController\Validation\QueryParamResolver;
 use Psr\Container\ContainerInterface;
@@ -27,6 +28,7 @@ return [
         'resolvers' => [
             FromRouteResolver::class,
             MapRequestPayloadResolver::class,
+            MapQueryStringResolver::class,
             QueryParamResolver::class,
             AutowireResolver::class,
             AutoInjectionResolver::class,
@@ -47,6 +49,14 @@ return [
 
                 return new MapRequestPayloadResolver($serializer, $validator, $request);
             },
+            MapQueryStringResolver::class => function (ContainerInterface $container) {
+
+                $serializer = $container->get(SerializerInterface::class);
+                $validator = $container->get(ValidatorInterface::class);
+                $request = $container->get('request');
+
+                return new MapQueryStringResolver($serializer, $validator, $request);
+            },
             QueryParamResolver::class => function (ContainerInterface $container) {
                 $request = $container->get('request');
 
@@ -60,7 +70,7 @@ return [
             },
             CurrentUserValueResolver::class => function (ContainerInterface $container) {
                 if (!$container->has(GetCurrentUser::class)) {
-                    throw new \RuntimeException('GetCurrentUser service is not registered in the container.');
+                    throw new RuntimeException('GetCurrentUser service is not registered in the container.');
                 }
                 $getCurrentUser = $container->get(GetCurrentUser::class);
 

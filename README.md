@@ -145,6 +145,87 @@ public function createAction(
 
 This attribute automatically deserializes the request body into the specified type.
 
+#### Example with Multiple Fields and Validators
+
+```php
+use Symfony\Component\Validator\Constraints as Assert;
+use JMS\Serializer\Annotation as Serializer;
+
+class UserCreateRequest
+{
+    #[Assert\NotBlank(message: "Username is required")]
+    #[Assert\Length(min: 3, max: 50, minMessage: "Username must be at least {{ limit }} characters", maxMessage: "Username cannot be longer than {{ limit }} characters")]
+    public string $username;
+
+    #[Assert\NotBlank(message: "Email is required")]
+    #[Assert\Email(message: "The email '{{ value }}' is not a valid email")]
+    public string $email;
+
+    #[Assert\NotBlank(message: "Password is required")]
+    #[Assert\Length(min: 8, minMessage: "Password must be at least {{ limit }} characters")]
+    #[Assert\Regex(
+        pattern: "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/",
+        message: "Password must include at least one uppercase letter, one lowercase letter, and one number"
+    )]
+    public string $password;
+
+    #[Assert\NotBlank(message: "Age is required")]
+    #[Assert\Range(
+        min: 18,
+        max: 120,
+        notInRangeMessage: "You must be between {{ min }} and {{ max }} years old"
+    )]
+    public int $age;
+}
+```
+
+Using this DTO with the `MapRequestPayload` attribute will automatically validate all fields according to the specified constraints.
+
+### MapQueryString
+The `MapQueryString` attribute maps the query string parameters to a typed object.
+
+```php
+use LaminasAttributeController\Validation\MapQueryString;
+use App\DTO\UserSearchRequest;
+
+public function searchAction(
+    #[MapQueryString] UserSearchRequest $searchCriteria
+) {
+    // $searchCriteria is populated from the query string parameters
+    return ['results' => $this->userService->search($searchCriteria)];
+}
+```
+
+This attribute automatically deserializes the query string parameters into the specified type, making it easy to work with structured query parameters in GET requests.
+
+#### Example with Multiple Fields and Validators
+
+```php
+use Symfony\Component\Validator\Constraints as Assert;
+use JMS\Serializer\Annotation as Serializer;
+
+class UserSearchRequest
+{
+    #[Assert\Length(min: 2, max: 50, minMessage: "Search term must be at least {{ limit }} characters")]
+    public ?string $searchTerm = null;
+
+    #[Assert\Range(
+        min: 1,
+        max: 100,
+        notInRangeMessage: "Results per page must be between {{ min }} and {{ max }}"
+    )]
+    public int $limit = 20;
+
+    #[Assert\PositiveOrZero(message: "Page number cannot be negative")]
+    public int $page = 0;
+
+    #[Assert\Choice(choices: ["asc", "desc"], message: "Sort direction must be either 'asc' or 'desc'")]
+    public string $sortDirection = "asc";
+}
+```
+
+Using this DTO with the `MapQueryString` attribute will automatically validate all query parameters according to the specified constraints. This example would handle a query like `?searchTerm=john&limit=50&page=2&sortDirection=desc`.
+
 ### CurrentUser
 The `CurrentUser` attribute injects the current authenticated user into a parameter.
 For implementation, you need to have a user entity and a service that retrieves the current user from the session or security context implemented `LaminasAttributeController\Security\GetCurrentUser`
@@ -208,6 +289,7 @@ return [
             // Default resolvers
             FromRouteResolver::class,
             MapRequestPayloadResolver::class,
+            MapQueryStringResolver::class,
             QueryParamResolver::class,
             AutowireResolver::class,
             AutoInjectionResolver::class,
@@ -235,7 +317,8 @@ The order of resolvers in the configuration is important as they are tried in se
 The package comes with the following default resolvers:
 
 - `FromRouteResolver`: Resolves parameters from route matches
-- `MapRequestPayloadResolver`: Maps request body to a parameter
+- `MapRequestPayloadResolver`: Maps request body to a parameter (POST, PUT, PATCH, etc)
+- `MapQueryStringResolver`: Maps request to a parameter from query params (GET request)
 - `QueryParamResolver`: Extracts and validates query parameters
 - `AutowireResolver`: Provides automatic dependency injection
 - `AutoInjectionResolver`: Provides automatic dependency injection
@@ -251,6 +334,7 @@ return [
             // Only include the resolvers you need
             FromRouteResolver::class,
             MapRequestPayloadResolver::class,
+            MapQueryStringResolver::class,
             QueryParamResolver::class,
             AutowireResolver::class,
             AutoInjectionResolver::class,
