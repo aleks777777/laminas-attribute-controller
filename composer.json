@@ -6,11 +6,21 @@
   "repositories": [],
   "require": {
     "php": "^8.2",
-    "laminas/laminas-mvc": "^3.0"
+    "laminas/laminas-mvc": "^3.0",
+    "beberlei/assert": "^3.3",
+    "doctrine/orm": "^3.3",
+    "jms/serializer": "^3.32",
+    "symfony/validator": "^7.3"
   },
   "require-dev": {
     "phpstan/phpstan": "^1.12",
-    "phpunit/phpunit": "^9.0"
+    "phpunit/phpunit": "^9.0",
+    "friendsofphp/php-cs-fixer": "^3.75"
+  },
+
+  "scripts": {
+    "cs": "./vendor/bin/php-cs-fixer fix src",
+    "stan": "./vendor/bin/phpstan"
   },
   "autoload": {
     "psr-4": {

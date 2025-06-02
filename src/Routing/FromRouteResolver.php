@@ -73,7 +73,6 @@ final readonly class FromRouteResolver implements ParameterResolverInterface
             /* @phpstan-ignore-next-line */
             return $metaData && $metaData->isMappedSuperclass === false;
         } catch (Throwable $e) {
-//        } catch (\Doctrine\Persistence\Mapping\MappingException $e) {
             return false; // if metadata is not found, it's not an entity
         }
     }

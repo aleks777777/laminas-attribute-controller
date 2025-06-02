@@ -2,25 +2,79 @@
 
 declare(strict_types=1);
 
-use Common\Factory\DotConfigurationServiceInterface;
+use Doctrine\ORM\EntityManagerInterface;
+use JMS\Serializer\SerializerInterface;
 use Laminas\ServiceManager\Factory\InvokableFactory;
 use LaminasAttributeController\ActionParameterResolver;
 use LaminasAttributeController\ActionParameterResolverFactory;
+use LaminasAttributeController\Injection\AutoInjectionResolver;
+use LaminasAttributeController\Injection\AutowireResolver;
+use LaminasAttributeController\Routing\FromRouteResolver;
 use LaminasAttributeController\Routing\RouteLoader;
 use LaminasAttributeController\Routing\RouteLoaderListener;
+use LaminasAttributeController\Security\CurrentUserValueResolver;
 use LaminasAttributeController\Security\GetCurrentUser;
+use LaminasAttributeController\Security\GuardListener;
 use LaminasAttributeController\Security\NullCurrentUser;
+use LaminasAttributeController\Validation\DefaultValueResolver;
+use LaminasAttributeController\Validation\MapRequestPayloadResolver;
+use LaminasAttributeController\Validation\QueryParamResolver;
 use Psr\Container\ContainerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 return [
+    'laminas-attribute-controller' => [
+        'resolvers' => [
+            FromRouteResolver::class,
+            MapRequestPayloadResolver::class,
+            QueryParamResolver::class,
+            AutowireResolver::class,
+            AutoInjectionResolver::class,
+            CurrentUserValueResolver::class,
+            DefaultValueResolver::class,
+        ],
+    ],
     'service_manager' => [
         'factories' => [
+            FromRouteResolver::class => function (ContainerInterface $container) {
+                return new FromRouteResolver($container->get(EntityManagerInterface::class));
+            },
+            MapRequestPayloadResolver::class => function (ContainerInterface $container) {
+
+                $serializer = $container->get(SerializerInterface::class);
+                $validator = $container->get(ValidatorInterface::class);
+                $request = $container->get('request');
+
+                return new MapRequestPayloadResolver($serializer, $validator, $request);
+            },
+            QueryParamResolver::class => function (ContainerInterface $container) {
+                $request = $container->get('request');
+
+                return new QueryParamResolver($request);
+            },
+            AutowireResolver::class => function (ContainerInterface $container) {
+                return new AutowireResolver($container);
+            },
+            AutoInjectionResolver::class => function (ContainerInterface $container) {
+                return new AutoInjectionResolver($container);
+            },
+            CurrentUserValueResolver::class => function (ContainerInterface $container) {
+                if (!$container->has(GetCurrentUser::class)) {
+                    throw new \RuntimeException('GetCurrentUser service is not registered in the container.');
+                }
+                $getCurrentUser = $container->get(GetCurrentUser::class);
+
+                return new CurrentUserValueResolver($getCurrentUser);
+            },
             ActionParameterResolver::class => ActionParameterResolverFactory::class,
             RouteLoader::class => function (ContainerInterface $container) {
+                $factories = $container->get('config')['controllers']['factories'] ?? [];
+                $invokables = $container->get('config')['controllers']['invokables'] ?? [];
+
                 return new RouteLoader(
                     array_merge(
-                        $container->get(DotConfigurationServiceInterface::class)->get('controllers.factories', []),
-                        $container->get(DotConfigurationServiceInterface::class)->get('controllers.invokables', []),
+                        $factories,
+                        $invokables,
                         []
                     )
                 );
@@ -29,6 +83,8 @@ return [
         ],
         'invokables' => [
             NullCurrentUser::class => NullCurrentUser::class,
+            GuardListener::class => GuardListener::class,
+            DefaultValueResolver::class => DefaultValueResolver::class,
         ],
         'aliases' => [
             GetCurrentUser::class => NullCurrentUser::class,
@@ -36,5 +92,6 @@ return [
     ],
     'listeners' => [
         RouteLoaderListener::class,
+        GuardListener::class,
     ],
 ];

@@ -9,6 +9,7 @@ use Laminas\Router\Http\Segment;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+
 use function array_filter;
 use function array_keys;
 use function class_exists;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LaminasAttributeController;
 
 use Laminas\Router\RouteMatch;
+use ReflectionAttribute;
 use ReflectionParameter;
 
 class ResolutionContext
@@ -16,7 +17,7 @@ class ResolutionContext
     }
 
     /**
-     * @return \ReflectionAttribute
+     * @return array<ReflectionAttribute>
      */
     public function getAttributes(): array
     {

@@ -8,6 +8,7 @@ use Laminas\Http\Exception\InvalidArgumentException;
 use Laminas\Http\Request;
 use LaminasAttributeController\ParameterResolverInterface;
 use LaminasAttributeController\ResolutionContext;
+use ReflectionNamedType;
 use Symfony\Component\Validator\Validation;
 
 final readonly class QueryParamResolver implements ParameterResolverInterface
@@ -21,16 +22,23 @@ final readonly class QueryParamResolver implements ParameterResolverInterface
     {
         $validator = Validation::createValidator();
 
+        $parameter = $context->parameter;
+        /** @var ReflectionNamedType $type */
+        $type = $parameter->getType();
+
+        if (! $type instanceof ReflectionNamedType) {
+            return null;
+        }
+
         foreach ($context->getAttributes() as $attribute) {
             $instance = $attribute->newInstance();
 
             if ($instance instanceof QueryParam) {
-                $defaultValue = $context->parameter->isDefaultValueAvailable() ? $context->parameter->getDefaultValue() : null;
+                $defaultValue = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : null;
                 /** @phpstan-ignore-next-line */
                 $value = $this->getValueByDotNotation($this->request->getQuery()->toArray(), $instance->name, $defaultValue);
 
-                // cast
-                $value = $value && $context->parameter->getType()->isBuiltin() ? $this->dynamicCast($context->parameter->getType()->getName(), $value) : $value;
+                $value = $value && $type->isBuiltin() ? $this->dynamicCast($type->getName(), $value) : $value;
 
                 if ($instance->required && $value === null) {
                     throw new InvalidArgumentException("Query parameter '{$instance->name}' is required.");

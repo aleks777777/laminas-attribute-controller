@@ -10,7 +10,6 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 final class ApiSymfonyValidatorChainException extends RuntimeException
 {
-
     /**
      * @param ConstraintViolationListInterface<ConstraintViolationInterface> $chain
      */
