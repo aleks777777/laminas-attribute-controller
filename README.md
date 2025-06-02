@@ -121,7 +121,7 @@ use LaminasAttributeController\Security\IsGranted;
 public function authorizedAction()
 {
     // Only accessible to authenticated users
-    return ['message' => 'Admin area'];
+    return ['message' => 'authorized area'];
 }
 ```
 
@@ -147,7 +147,7 @@ This attribute automatically deserializes the request body into the specified ty
 
 ### CurrentUser
 The `CurrentUser` attribute injects the current authenticated user into a parameter.
-
+For implementation, you need to have a user entity and a service that retrieves the current user from the session or security context implemented `LaminasAttributeController\Security\GetCurrentUser`
 ```php
 use LaminasAttributeController\Security\CurrentUser;
 use App\Entity\User;
