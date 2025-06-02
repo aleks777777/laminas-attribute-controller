@@ -8,9 +8,9 @@
     "php": "^8.2",
     "laminas/laminas-mvc": "^3.0",
     "beberlei/assert": "^3.3",
-    "doctrine/orm": "^3.3",
-    "jms/serializer": "^3.32",
-    "symfony/validator": "^7.3"
+    "doctrine/orm": "^2.0 | ^3.0",
+    "jms/serializer": "^3.30",
+    "symfony/validator": "^5.4 | ^6.0 | ^7.0"
   },
   "require-dev": {
     "phpstan/phpstan": "^1.12",
