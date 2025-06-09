@@ -6,6 +6,7 @@ namespace LaminasAttributeController\Security;
 
 use Laminas\Http\Exception\InvalidArgumentException;
 use LaminasAttributeController\ParameterResolverInterface;
+use LaminasAttributeController\ParameterValue;
 use LaminasAttributeController\ResolutionContext;
 use ReflectionNamedType;
 
@@ -16,7 +17,7 @@ final readonly class CurrentUserValueResolver implements ParameterResolverInterf
     ) {
     }
 
-    public function resolve(ResolutionContext $context): mixed
+    public function resolve(ResolutionContext $context): ParameterValue
     {
         foreach ($context->getAttributes() as $attribute) {
             if ($attribute->getName() !== CurrentUser::class) {
@@ -27,9 +28,9 @@ final readonly class CurrentUserValueResolver implements ParameterResolverInterf
                 throw new InvalidArgumentException('For mapping `current user` type is required');
             }
 
-            return $this->currentUser->getCurrentUser();
+            return ParameterValue::found(CurrentUser::class, $this->currentUser->getCurrentUser());
         }
 
-        return null;
+        return ParameterValue::notFound();
     }
 }

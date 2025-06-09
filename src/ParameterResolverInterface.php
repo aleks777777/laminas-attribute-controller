@@ -6,5 +6,5 @@ namespace LaminasAttributeController;
 
 interface ParameterResolverInterface
 {
-    public function resolve(ResolutionContext $context): mixed;
+    public function resolve(ResolutionContext $context): ParameterValue;
 }
