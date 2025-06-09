@@ -47,8 +47,8 @@ final readonly class ActionParameterResolver
         foreach ($this->resolvers as $resolver) {
             $result = $resolver->resolve($context);
 
-            if ($result !== null) {
-                return $result;
+            if ($result->found) {
+                return $result->value;
             }
         }
 

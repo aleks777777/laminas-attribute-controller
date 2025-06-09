@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace LaminasAttributeController\Validation;
 
 use LaminasAttributeController\ParameterResolverInterface;
+use LaminasAttributeController\ParameterValue;
 use LaminasAttributeController\ResolutionContext;
 
 final class DefaultValueResolver implements ParameterResolverInterface
 {
-    public function resolve(ResolutionContext $context): mixed
+    public function resolve(ResolutionContext $context): ParameterValue
     {
-        return $context->parameter->isDefaultValueAvailable() ? $context->parameter->getDefaultValue() : null;
+        if ($context->parameter->isDefaultValueAvailable()) {
+            return ParameterValue::found(null, $context->parameter->getDefaultValue());
+        }
+
+        return ParameterValue::notFound();
     }
 }
