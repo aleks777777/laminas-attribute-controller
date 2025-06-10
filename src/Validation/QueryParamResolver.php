@@ -7,6 +7,7 @@ namespace LaminasAttributeController\Validation;
 use Laminas\Http\Exception\InvalidArgumentException;
 use Laminas\Http\Request;
 use LaminasAttributeController\ParameterResolverInterface;
+use LaminasAttributeController\ParameterValue;
 use LaminasAttributeController\ResolutionContext;
 use ReflectionNamedType;
 use Symfony\Component\Validator\Validation;
@@ -18,7 +19,7 @@ final readonly class QueryParamResolver implements ParameterResolverInterface
     ) {
     }
 
-    public function resolve(ResolutionContext $context): mixed
+    public function resolve(ResolutionContext $context): ParameterValue
     {
         $validator = Validation::createValidator();
 
@@ -27,7 +28,7 @@ final readonly class QueryParamResolver implements ParameterResolverInterface
         $type = $parameter->getType();
 
         if (! $type instanceof ReflectionNamedType) {
-            return null;
+            return ParameterValue::notFound();
         }
 
         foreach ($context->getAttributes() as $attribute) {
@@ -53,11 +54,11 @@ final readonly class QueryParamResolver implements ParameterResolverInterface
                     }
                 }
 
-                return $value;
+                return ParameterValue::found(QueryParam::class, $value);
             }
         }
 
-        return null;
+        return ParameterValue::notFound();
     }
 
     /**

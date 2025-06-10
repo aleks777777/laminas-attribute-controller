@@ -9,6 +9,7 @@ use JMS\Serializer\SerializerInterface;
 use Laminas\Http\Exception\InvalidArgumentException;
 use Laminas\Http\Request;
 use LaminasAttributeController\ParameterResolverInterface;
+use LaminasAttributeController\ParameterValue;
 use LaminasAttributeController\ResolutionContext;
 use ReflectionNamedType;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -22,7 +23,7 @@ final readonly class MapRequestPayloadResolver implements ParameterResolverInter
     ) {
     }
 
-    public function resolve(ResolutionContext $context): mixed
+    public function resolve(ResolutionContext $context): ParameterValue
     {
         foreach ($context->getAttributes() as $attribute) {
             if ($attribute->getName() !== MapRequestPayload::class) {
@@ -51,9 +52,9 @@ final readonly class MapRequestPayloadResolver implements ParameterResolverInter
                 throw new ApiSymfonyValidatorChainException($result);
             }
 
-            return $value;
+            return ParameterValue::found(MapRequestPayload::class, $value);
         }
 
-        return null;
+        return ParameterValue::notFound();
     }
 }

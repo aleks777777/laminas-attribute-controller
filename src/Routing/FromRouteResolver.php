@@ -7,6 +7,7 @@ namespace LaminasAttributeController\Routing;
 use Doctrine\ORM\EntityManagerInterface;
 use Laminas\Http\Exception\InvalidArgumentException;
 use LaminasAttributeController\ParameterResolverInterface;
+use LaminasAttributeController\ParameterValue;
 use LaminasAttributeController\ResolutionContext;
 use ReflectionNamedType;
 use Throwable;
@@ -18,7 +19,7 @@ final readonly class FromRouteResolver implements ParameterResolverInterface
     ) {
     }
 
-    public function resolve(ResolutionContext $context): mixed
+    public function resolve(ResolutionContext $context): ParameterValue
     {
         $paramName = $context->parameter->getName();
 
@@ -27,7 +28,7 @@ final readonly class FromRouteResolver implements ParameterResolverInterface
             $type = (string) $context->parameter->getType();
             $value = $context->routeMatch->getParams()[$paramName];
 
-            return $this->dynamicCast($type, $value);
+            return ParameterValue::found(null, $this->dynamicCast($type, $value));
         }
 
         // If the parameter is a route entity, return the entity
@@ -37,18 +38,18 @@ final readonly class FromRouteResolver implements ParameterResolverInterface
             $value = $context->routeMatch->getParams()['id'] ?? null;
 
             if ($value === null) {
-                return null;
+                return ParameterValue::notFound();
             }
 
             /** @var class-string<object> $entityClass */
             $entityClass = $paramType->getName();
 
             if ($this->isEntity($entityClass)) {
-                return $this->loadEntity($entityClass, (int) $value);
+                return ParameterValue::found(null, $this->loadEntity($entityClass, (int) $value));
             }
         }
 
-        return null;
+        return ParameterValue::notFound();
     }
 
     /** @param class-string<object> $className */

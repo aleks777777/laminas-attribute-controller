@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LaminasAttributeController\Injection;
 
 use LaminasAttributeController\ParameterResolverInterface;
+use LaminasAttributeController\ParameterValue;
 use LaminasAttributeController\ResolutionContext;
 use Psr\Container\ContainerInterface;
 use ReflectionNamedType;
@@ -16,7 +17,7 @@ final readonly class AutowireResolver implements ParameterResolverInterface
     ) {
     }
 
-    public function resolve(ResolutionContext $context): mixed
+    public function resolve(ResolutionContext $context): ParameterValue
     {
         foreach ($context->getAttributes() as $attribute) {
             $instance = $attribute->newInstance();
@@ -26,13 +27,17 @@ final readonly class AutowireResolver implements ParameterResolverInterface
                 $alias = $instance->alias ?? ($type instanceof ReflectionNamedType ? $type->getName() : null);
 
                 if (! $alias) {
-                    return null;
+                    return ParameterValue::notFound();
                 }
 
-                return $this->container->has($alias) ? $this->container->get($alias) : null;
+                if ($this->container->has($alias)) {
+                    return ParameterValue::found(Autowire::class, $this->container->get($alias));
+                }
+
+                return ParameterValue::notFound();
             }
         }
 
-        return null;
+        return ParameterValue::notFound();
     }
 }
