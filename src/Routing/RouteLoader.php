@@ -54,7 +54,7 @@ final readonly class RouteLoader
                                 'action' => $actionName,
                             ],
                         ],
-                        'may_terminate' => true,
+                        'may_terminate' => false,
                         'child_routes' => [],
                     ];
 
@@ -64,6 +64,7 @@ final readonly class RouteLoader
                             'options' => [
                                 'verb' => strtoupper($httpMethod),
                             ],
+                            'may_terminate' => true,
                         ];
                     }
 

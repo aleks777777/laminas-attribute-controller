@@ -34,6 +34,10 @@ final readonly class MapRequestPayloadResolver implements ParameterResolverInter
                 throw new InvalidArgumentException('For mapping payload type is required');
             }
 
+            if (! $this->request->getHeader('Content-Type')) {
+                return ParameterValue::notFound();
+            }
+
             $contentType = $this->request->getHeader('Content-Type')->getFieldValue();
             $payload = '{}';
 
