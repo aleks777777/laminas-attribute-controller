@@ -128,6 +128,49 @@ public function authorizedAction()
 **Parameters:**
 - `role` (string): The role required to access the method
 
+### MapRequestHeaders
+The `MapRequestHeaders` attribute maps HTTP request headers to a typed object (DTO) and validates them.
+
+```php
+use LaminasAttributeController\Validation\MapRequestHeaders;
+use Clients\Application\Dto\Document\UploadDocumentHeadersDto;
+
+public function uploadAction(
+    #[MapRequestHeaders(UploadDocumentHeadersDto::class, requiredHeaders: ['x-document-type', 'x-filename', 'x-mime-type', 'x-size'])]
+    UploadDocumentHeadersDto $headers
+) {
+    // $headers is populated from request headers and validated
+    return ['status' => 'headers received'];
+}
+```
+
+This attribute automatically maps and validates the specified headers into the given DTO.
+
+#### Example with Multiple Headers and Validators
+
+```php
+use Symfony\Component\Validator\Constraints as Assert;
+use Clients\Domain\Document\DocumentType;
+
+final class UploadDocumentHeadersDto
+{
+    public function __construct(
+        #[Assert\NotBlank]
+        #[Assert\Choice(callback: [DocumentType::class, 'values'])]
+        public string $xDocumentType,
+        #[Assert\NotBlank]
+        public string $xFilename,
+        #[Assert\NotBlank]
+        public string $xMimeType,
+        #[Assert\NotBlank]
+        public int $xSize,
+    ) {
+    }
+}
+```
+
+Using this DTO with the `MapRequestHeaders` attribute will automatically validate all headers according to the specified constraints. If any required header is missing or invalid, a validation error will be returned.
+
 ### MapRequestPayload
 The `MapRequestPayload` attribute maps the request body to a parameter.
 
