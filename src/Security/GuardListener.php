@@ -18,6 +18,13 @@ use function json_encode;
 
 final class GuardListener extends AbstractListenerAggregate
 {
+    private GetCurrentUser $currentUser;
+
+    public function __construct(GetCurrentUser $currentUser)
+    {
+        $this->currentUser = $currentUser;
+    }
+
     public function attach(EventManagerInterface $events, $priority = 1): void
     {
         $this->listeners[] = $events->attach(MvcEvent::EVENT_ROUTE, [$this, 'onRoute'], 1500);
@@ -52,7 +59,7 @@ final class GuardListener extends AbstractListenerAggregate
         $attribute = $attribute[0]->newInstance();
 
         if ($attribute->role === 'FULLY_AUTHENTICATED') {
-            if (! $event->getParam('identity')) {
+            if ($this->currentUser->getCurrentUser() === null) {
                 /** @var Response $response */
                 $response = $event->getResponse();
                 $response->getHeaders()->addHeader(new ContentType('application/json'));

@@ -89,11 +89,15 @@ return [
                     )
                 );
             },
+            GuardListener::class => function (ContainerInterface $container) {
+                return new RouteLoader(
+                    $container->get(GetCurrentUser::class)
+                );
+            },
             RouteLoaderListener::class => InvokableFactory::class,
         ],
         'invokables' => [
             NullCurrentUser::class => NullCurrentUser::class,
-            GuardListener::class => GuardListener::class,
             DefaultValueResolver::class => DefaultValueResolver::class,
         ],
         'aliases' => [
