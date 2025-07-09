@@ -90,7 +90,7 @@ return [
                 );
             },
             GuardListener::class => function (ContainerInterface $container) {
-                return new RouteLoader(
+                return new GuardListener(
                     $container->get(GetCurrentUser::class)
                 );
             },
