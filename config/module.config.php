@@ -13,8 +13,11 @@ use LaminasAttributeController\Routing\FromRouteResolver;
 use LaminasAttributeController\Routing\RouteLoader;
 use LaminasAttributeController\Routing\RouteLoaderListener;
 use LaminasAttributeController\Security\CurrentUserValueResolver;
+use LaminasAttributeController\Security\EmptyPermissions;
 use LaminasAttributeController\Security\GetCurrentUser;
+use LaminasAttributeController\Security\GetPermissions;
 use LaminasAttributeController\Security\GuardListener;
+use LaminasAttributeController\Security\GuardPermissionListener;
 use LaminasAttributeController\Security\NullCurrentUser;
 use LaminasAttributeController\Validation\DefaultValueResolver;
 use LaminasAttributeController\Validation\MapQueryStringResolver;
@@ -94,18 +97,26 @@ return [
                     $container->get(GetCurrentUser::class)
                 );
             },
+            GuardPermissionListener::class => function (ContainerInterface $container) {
+                return new GuardPermissionListener(
+                    $container->get(GetPermissions::class)
+                );
+            },
             RouteLoaderListener::class => InvokableFactory::class,
         ],
         'invokables' => [
             NullCurrentUser::class => NullCurrentUser::class,
+            EmptyPermissions::class => EmptyPermissions::class,
             DefaultValueResolver::class => DefaultValueResolver::class,
         ],
         'aliases' => [
             GetCurrentUser::class => NullCurrentUser::class,
+            GetPermissions::class => EmptyPermissions::class,
         ],
     ],
     'listeners' => [
         RouteLoaderListener::class,
         GuardListener::class,
+        GuardPermissionListener::class,
     ],
 ];
