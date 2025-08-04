@@ -2,7 +2,7 @@
   "name": "a7-tech/laminas-attribute-controller",
   "description": "Package for Laminas Framework to use attributes sugar in controller.",
   "type": "library",
-  "license": "proprietary",
+  "license": "MIT",
   "repositories": [],
   "require": {
     "php": "^8.2",
