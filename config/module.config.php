@@ -18,6 +18,7 @@ use LaminasAttributeController\Security\GuardListener;
 use LaminasAttributeController\Security\NullCurrentUser;
 use LaminasAttributeController\Validation\DefaultValueResolver;
 use LaminasAttributeController\Validation\MapQueryStringResolver;
+use LaminasAttributeController\Validation\MapRequestHeaderResolver;
 use LaminasAttributeController\Validation\MapRequestPayloadResolver;
 use LaminasAttributeController\Validation\QueryParamResolver;
 use Psr\Container\ContainerInterface;
@@ -33,6 +34,7 @@ return [
             AutowireResolver::class,
             AutoInjectionResolver::class,
             CurrentUserValueResolver::class,
+            MapRequestHeaderResolver::class,
             DefaultValueResolver::class,
         ],
     ],
@@ -40,6 +42,11 @@ return [
         'factories' => [
             FromRouteResolver::class => function (ContainerInterface $container) {
                 return new FromRouteResolver($container->get(EntityManagerInterface::class));
+            },
+            MapRequestHeaderResolver::class => function (ContainerInterface $container) {
+                $request = $container->get('request');
+
+                return new MapRequestHeaderResolver($request);
             },
             MapRequestPayloadResolver::class => function (ContainerInterface $container) {
 

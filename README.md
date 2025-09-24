@@ -128,6 +128,35 @@ public function authorizedAction()
 **Parameters:**
 - `role` (string): The role required to access the method
 
+### MapRequestHeader
+The `MapRequestHeader` attribute maps a single HTTP request header to a controller argument. It supports mapping the value as a string, an array, or an `LaminasAttributeController\Validation\AcceptHeader` instance.
+
+```php
+use LaminasAttributeController\Validation\AcceptHeader;
+use LaminasAttributeController\Validation\MapRequestHeader;
+
+public function showAction(
+    #[MapRequestHeader('user-agent')] string $userAgent,
+    #[MapRequestHeader] array $accept, // header name defaults to the parameter name
+    #[MapRequestHeader('accept-language')] array $languages,
+    #[MapRequestHeader('accept')] AcceptHeader $acceptHeader,
+) {
+    // $userAgent contains the raw header value
+    // $accept is an array of acceptable content types
+    // $languages contains normalised language codes such as en_US
+    // $acceptHeader exposes the parsed Accept header instance
+}
+```
+
+When the argument type is `array`, common negotiated headers receive special handling:
+
+- `Accept` resolves to the ordered list of acceptable content types.
+- `Accept-Charset` and `Accept-Encoding` resolve to arrays of the requested charsets or encodings.
+- `Accept-Language` resolves to normalised language codes (`en_US`, `en`, ...).
+- Other headers return all values for the header.
+
+If the header is missing, default parameter values or nullable types are honoured. Otherwise, an `Laminas\\Http\\Exception\\InvalidArgumentException` is thrown.
+
 ### MapRequestPayload
 The `MapRequestPayload` attribute maps the request body to a parameter.
 
