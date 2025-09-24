@@ -18,7 +18,7 @@ use LaminasAttributeController\Security\GuardListener;
 use LaminasAttributeController\Security\NullCurrentUser;
 use LaminasAttributeController\Validation\DefaultValueResolver;
 use LaminasAttributeController\Validation\MapQueryStringResolver;
-use LaminasAttributeController\Validation\MapRequestHeadersResolver;
+use LaminasAttributeController\Validation\MapRequestHeaderResolver;
 use LaminasAttributeController\Validation\MapRequestPayloadResolver;
 use LaminasAttributeController\Validation\QueryParamResolver;
 use Psr\Container\ContainerInterface;
@@ -28,7 +28,7 @@ return [
     'laminas-attribute-controller' => [
         'resolvers' => [
             FromRouteResolver::class,
-            MapRequestHeadersResolver::class,
+            MapRequestHeaderResolver::class,
             MapRequestPayloadResolver::class,
             MapQueryStringResolver::class,
             QueryParamResolver::class,
@@ -43,12 +43,10 @@ return [
             FromRouteResolver::class => function (ContainerInterface $container) {
                 return new FromRouteResolver($container->get(EntityManagerInterface::class));
             },
-            MapRequestHeadersResolver::class => function (ContainerInterface $container) {
-
-                $validator = $container->get(ValidatorInterface::class);
+            MapRequestHeaderResolver::class => function (ContainerInterface $container) {
                 $request = $container->get('request');
 
-                return new MapRequestHeadersResolver($validator, $request);
+                return new MapRequestHeaderResolver($request);
             },
             MapRequestPayloadResolver::class => function (ContainerInterface $container) {
 
