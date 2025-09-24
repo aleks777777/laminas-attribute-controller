@@ -28,13 +28,13 @@ return [
     'laminas-attribute-controller' => [
         'resolvers' => [
             FromRouteResolver::class,
-            MapRequestHeaderResolver::class,
             MapRequestPayloadResolver::class,
             MapQueryStringResolver::class,
             QueryParamResolver::class,
             AutowireResolver::class,
             AutoInjectionResolver::class,
             CurrentUserValueResolver::class,
+            MapRequestHeaderResolver::class,
             DefaultValueResolver::class,
         ],
     ],
