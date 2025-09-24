@@ -128,48 +128,34 @@ public function authorizedAction()
 **Parameters:**
 - `role` (string): The role required to access the method
 
-### MapRequestHeaders
-The `MapRequestHeaders` attribute maps HTTP request headers to a typed object (DTO) and validates them.
+### MapRequestHeader
+The `MapRequestHeader` attribute maps a single HTTP request header to a controller argument. It supports mapping the value as a string, an array, or an `LaminasAttributeController\Validation\AcceptHeader` instance.
 
 ```php
-use LaminasAttributeController\Validation\MapRequestHeaders;
-use Clients\Application\Dto\Document\UploadDocumentHeadersDto;
+use LaminasAttributeController\Validation\AcceptHeader;
+use LaminasAttributeController\Validation\MapRequestHeader;
 
-public function uploadAction(
-    #[MapRequestHeaders(UploadDocumentHeadersDto::class, requiredHeaders: ['x-document-type', 'x-filename', 'x-mime-type', 'x-size'])]
-    UploadDocumentHeadersDto $headers
+public function showAction(
+    #[MapRequestHeader('user-agent')] string $userAgent,
+    #[MapRequestHeader] array $accept, // header name defaults to the parameter name
+    #[MapRequestHeader('accept-language')] array $languages,
+    #[MapRequestHeader('accept')] AcceptHeader $acceptHeader,
 ) {
-    // $headers is populated from request headers and validated
-    return ['status' => 'headers received'];
+    // $userAgent contains the raw header value
+    // $accept is an array of acceptable content types
+    // $languages contains normalised language codes such as en_US
+    // $acceptHeader exposes the parsed Accept header instance
 }
 ```
 
-This attribute automatically maps and validates the specified headers into the given DTO.
+When the argument type is `array`, common negotiated headers receive special handling:
 
-#### Example with Multiple Headers and Validators
+- `Accept` resolves to the ordered list of acceptable content types.
+- `Accept-Charset` and `Accept-Encoding` resolve to arrays of the requested charsets or encodings.
+- `Accept-Language` resolves to normalised language codes (`en_US`, `en`, ...).
+- Other headers return all values for the header.
 
-```php
-use Symfony\Component\Validator\Constraints as Assert;
-use Clients\Domain\Document\DocumentType;
-
-final class UploadDocumentHeadersDto
-{
-    public function __construct(
-        #[Assert\NotBlank]
-        #[Assert\Choice(callback: [DocumentType::class, 'values'])]
-        public string $xDocumentType,
-        #[Assert\NotBlank]
-        public string $xFilename,
-        #[Assert\NotBlank]
-        public string $xMimeType,
-        #[Assert\NotBlank]
-        public int $xSize,
-    ) {
-    }
-}
-```
-
-Using this DTO with the `MapRequestHeaders` attribute will automatically validate all headers according to the specified constraints. If any required header is missing or invalid, a validation error will be returned.
+If the header is missing, default parameter values or nullable types are honoured. Otherwise, an `Laminas\\Http\\Exception\\InvalidArgumentException` is thrown.
 
 ### MapRequestPayload
 The `MapRequestPayload` attribute maps the request body to a parameter.
