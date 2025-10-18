@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Validation;
 
+use Laminas\Http\Exception\InvalidArgumentException;
 use Laminas\Http\Request;
 use Laminas\Router\RouteMatch;
 use LaminasAttributeController\ResolutionContext;
-use Laminas\Http\Exception\InvalidArgumentException;
 use LaminasAttributeController\Validation\AcceptHeader;
 use LaminasAttributeController\Validation\MapRequestHeader;
 use LaminasAttributeController\Validation\MapRequestHeaderResolver;

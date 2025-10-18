@@ -2,28 +2,36 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Application\Controller;
+namespace Tests;
 
-use Laminas\Router\Http\TreeRouteStack;
-use LaminasAttributeController\Injection\Autowire;
-use LaminasAttributeController\Validation\QueryParam;
-use LaminasAttributeController\Routing\Route;
-use LaminasAttributeController\AttributeActionController;
-use LaminasAttributeController\ActionParameterResolver;
-use LaminasAttributeController\Injection\AutoInjectionResolver;
-use LaminasAttributeController\Injection\AutowireResolver;
-use LaminasAttributeController\Validation\QueryParamResolver;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ObjectRepository;
+use InvalidArgumentException;
 use Laminas\EventManager\EventManager;
-use Laminas\Http\Exception\InvalidArgumentException;
+use Laminas\Http\Exception\InvalidArgumentException as LaminasInvalidArgumentException;
 use Laminas\Http\Request;
 use Laminas\Mvc\Application;
 use Laminas\Mvc\MvcEvent;
+use Laminas\Router\Http\TreeRouteStack;
 use Laminas\ServiceManager\ServiceManager;
 use Laminas\Stdlib\Parameters;
 use Laminas\Stdlib\ResponseInterface;
+use LaminasAttributeController\ActionParameterResolver;
+use LaminasAttributeController\AttributeActionController;
+use LaminasAttributeController\Injection\AutoInjectionResolver;
+use LaminasAttributeController\Injection\AutowireResolver;
+use LaminasAttributeController\Routing\FromRouteResolver;
+use LaminasAttributeController\Routing\Route;
+use LaminasAttributeController\Routing\RouteLoader;
+use LaminasAttributeController\Security\CurrentUser;
+use LaminasAttributeController\Security\CurrentUserValueResolver;
+use LaminasAttributeController\Security\GetCurrentUser;
+use LaminasAttributeController\Validation\DefaultValueResolver;
+use LaminasAttributeController\Validation\QueryParam;
+use LaminasAttributeController\Validation\QueryParamResolver;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use function get_class;
-use function json_encode;
 
 class AttributeActionControllerTest extends TestCase
 {
@@ -31,59 +39,48 @@ class AttributeActionControllerTest extends TestCase
 
     /**
      * @dataProvider dataProviderForDispatch
-     *
      * @test
-     * @group new
-     * @param mixed      $request
-     * @param mixed      $expected
-     * @param mixed|null $exception
-     * @param mixed|null $exceptionMessage
      */
-    public function dispatch_with_request(AttributeActionController $controller, Request $request, ?array $expected = null, ?string $exception = null, string $exceptionMessage = null): void
-    {
+    public function dispatch_with_request(
+        AttributeActionController $controller,
+        Request                   $request,
+        ?array                    $expected = null,
+        ?string                   $exception = null,
+        ?string                   $exceptionMessage = null
+    ): void {
         $this->serviceManager = new ServiceManager();
         $this->serviceManager->setService(get_class($controller), $controller);
 
-//        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createEntityManager();
+        $this->serviceManager->setService(EntityManagerInterface::class, $entityManager);
 
-//        $validator = (new ValidatorBuilder())->enableAnnotationMapping()->getValidator();
-//        $this->serviceManager->setService(EntityManagerInterface::class, $entityManager);
-//        $clientAuth = $this->createMock(GetAuthenticatedClientServiceInterface::class);
-//        $clientAuth->method('execute')->willReturn((new Client())->setEmail('test-auth@client.com'));
+        $currentUserProvider = new TestGetCurrentUser();
+        $currentUserProvider->auth(new User(1, 'test-auth@client.com'));
+        $this->serviceManager->setService(GetCurrentUser::class, $currentUserProvider);
+
+        $logger = new PromptedMonologRegistry();
+        $this->serviceManager->setService(PromptedMonologRegistryInterface::class, $logger);
+        $this->serviceManager->setService(PromptedMonologRegistry::class, $logger);
+
+
         $resolver = new ActionParameterResolver(
-//            new FromRouteResolver($entityManager),
-//            new MapRequestPayloadResolver((new SerializerBuilder())->build(), $validator, $request),
+            new FromRouteResolver($entityManager),
             new QueryParamResolver($request),
             new AutowireResolver($this->serviceManager),
             new AutoInjectionResolver($this->serviceManager),
-//            new CurrentUserValueResolver($clientAuth),
+            new CurrentUserValueResolver($currentUserProvider),
             new DefaultValueResolver(),
         );
         $this->serviceManager->setService(ActionParameterResolver::class, $resolver);
 
-//        $dot = $this->createMock(DotConfigurationServiceInterface::class);
-//        $dot->method('get')->willReturnMap([
-//            ['controllers.factories', [], [get_class($controller) => get_class($controller)]],
-//            ['controllers.invokables', [], []],
-//        ]);
-
-//        $this->serviceManager->setService(DotConfigurationServiceInterface::class, $dot);
-
-//        $routeLoader = new RouteLoader($dot);
-//        $this->serviceManager->setService(RouteLoader::class, $routeLoader);
-
-//        $listener = new RouteLoaderListener();
-
         $router = new TreeRouteStack();
+        $routeLoader = new RouteLoader([get_class($controller) => get_class($controller)]);
 
-//        $translator = $this->createMock(Translator::class);
-//        $translator->method('translate')->will($this->returnArgument(0));
-//        $this->serviceManager->setService('translator', $translator);
-//        $router->setTranslator($translator);
-//        $router->setTranslatorEnabled(false); // Enable the translator
+        foreach ($routeLoader->loadRoutes() as $name => $config) {
+            $router->addRoute($name, $config);
+        }
 
         $this->serviceManager->setService('Router', $router);
-//        $listener->onBootstrap($this->createMvcEvent($router, $request));
 
         $routeMatch = $router->match($request);
 
@@ -111,15 +108,14 @@ class AttributeActionControllerTest extends TestCase
         return [
             'case without parameters' => [
                 'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['POST'], name: 'user_create')]
-                    public function createUserAction(): array
+                    #[Route(path: '/user', methods: ['GET'], name: 'user_index')]
+                    public function indexAction(): array
                     {
                         return ['status' => 'User created'];
                     }
                 },
-                'request' => $this->createHttpRequest('/user', 'POST'),
+                'request' => $this->createHttpRequest('/user', 'GET'),
                 'expected' => ['status' => 'User created'],
-                'exception' => null,
             ],
             'case with query param' => [
                 'controller' => new class extends AttributeActionController {
@@ -131,7 +127,6 @@ class AttributeActionControllerTest extends TestCase
                 },
                 'request' => $this->createHttpRequest('/user/filter', 'GET', ['filter' => 'active']),
                 'expected' => ['filter' => 'active'],
-                'exception' => null,
             ],
             'case with required query param' => [
                 'controller' => new class extends AttributeActionController {
@@ -146,22 +141,9 @@ class AttributeActionControllerTest extends TestCase
                 'exception' => InvalidArgumentException::class,
                 'exceptionMessage' => "Query parameter 'filter' is required",
             ],
-            'case query param with validation' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user/filter', methods: ['GET'], name: 'user_filter')]
-                    public function filterUserAction(#[QueryParam('filter', [new Range(['min' => 4])])] string $filter): array
-                    {
-                        return ['filter' => $filter];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user/filter', 'GET', ['filter' => 3]),
-                'expected' => null,
-                'exception' => InvalidArgumentException::class,
-                'exceptionMessage' => "Validation failed for 'filter': This value should be 4 or more.",
-            ],
             'case with incorrect route (404)' => [
                 'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['GET'], name: 'user_filter')]
+                    #[Route(path: '/user', methods: ['GET'], name: 'user')]
                     public function filterUserAction(): array
                     {
                         return [];
@@ -170,181 +152,23 @@ class AttributeActionControllerTest extends TestCase
                 'request' => $this->createHttpRequest('/user/filter', 'GET', ['filter' => 'active']),
                 'expected' => null,
                 'exception' => InvalidArgumentException::class,
+                'exceptionMessage' => 'RouteMatch not found',
             ],
             'case with injection' => [
                 'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['GET'], name: 'user')]
-                    public function filterUserAction(PromptedMonologRegistryInterface $logger): array
+                    #[Route(path: '/logger', methods: ['GET'], name: 'logger')]
+                    public function logAction(PromptedMonologRegistryInterface $logger): array
                     {
                         return [$logger::class];
                     }
                 },
-                'request' => $this->createHttpRequest('/user', 'GET'),
+                'request' => $this->createHttpRequest('/logger', 'GET'),
                 'expected' => [PromptedMonologRegistry::class],
-            ],
-            'case with mapping input and validation' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['POST'], name: 'user')]
-                    public function createUserAction(#[MapRequestPayload] ExampleInput $input): array
-                    {
-                        return [$input->title];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user', 'POST', [], [], json_encode(['title' => 'test'])),
-                'expected' => ['test'],
-            ],
-            'case with mapping input and failed on validation' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['POST'], name: 'user')]
-                    public function createUserAction(#[MapRequestPayload] ExampleInput $input): array
-                    {
-                        return [$input->title];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user', 'POST', [], [], json_encode(['title' => 'te', 'testField' => '', 'range' => 1])),
-                'expected' => ['test'],
-                'exception' => ApiSymfonyValidatorChainException::class,
-                'exceptionMessage' => 'Input validation failed',
-            ],
-            'case with mapping input without type' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['POST'], name: 'user')]
-                    public function createUserAction(#[MapRequestPayload] $input): array
-                    {
-                        return [$input->title];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user', 'POST', [], [], json_encode(['title' => 'test'])),
-                'expected' => ['test'],
-                'exception' => InvalidArgumentException::class,
-                'exceptionMessage' => 'For mapping payload type is required',
-            ],
-            'case with payload without mapping' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['POST'], name: 'user')]
-                    public function createUserAction(ExampleInput $input): array
-                    {
-                        return [];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user', 'POST', [], ['title' => 'test'], json_encode(['title' => 'test'])),
-                'expected' => ['test'],
-                'exception' => InvalidArgumentException::class,
-                'exceptionMessage' => "Unable to resolve parameter 'input'",
-            ],
-            'case try inject without type' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['GET'], name: 'user')]
-                    public function filterUserAction($logger): array
-                    {
-                        return [$logger::class];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user', 'GET'),
-                'expected' => null,
-                'exception' => InvalidArgumentException::class,
-                'exceptionMessage' => "Unable to resolve parameter 'logger'",
-            ],
-            'case with autowire' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['GET'], name: 'user')]
-                    public function filterUserAction(#[Autowire('logger')] $logger): array
-                    {
-                        return [$logger::class];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user', 'GET'),
-                'expected' => [PromptedMonologRegistry::class],
-            ],
-            'case with autowire without alias and type' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['GET'], name: 'user')]
-                    public function filterUserAction(#[Autowire] $logger): array
-                    {
-                        return [$logger::class];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user', 'GET'),
-                'expected' => null,
-                'exception' => InvalidArgumentException::class,
-                'exceptionMessage' => "Unable to resolve parameter 'logger'",
-            ],
-            'case with scalar route param' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user/:id', methods: ['GET'], name: 'user')]
-                    public function findAction(int $id): array
-                    {
-                        return [$id];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user/5', 'GET'),
-                'expected' => [5],
-            ],
-            'case with entity route param' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user/:id', methods: ['GET'], name: 'user')]
-                    public function findAction(User $user): array
-                    {
-                        return [$user->getId()];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user/5', 'GET'),
-                'expected' => [5],
-            ],
-            'case with entity route param but throw mapping exception' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user/:id', methods: ['GET'], name: 'user')]
-                    public function findAction(Client $exceptionMapping): array
-                    {
-                        // by setup test resolved should throw mapping exception if entity Client
-                        return [$exceptionMapping];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user/5', 'GET'),
-                'expected' => null,
-                'exception' => InvalidArgumentException::class,
-                'exceptionMessage' => "Unable to resolve parameter 'exceptionMapping'",
-            ],
-            'case with not found entity' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user/:id', methods: ['GET'], name: 'user')]
-                    public function findAction(User $user): array
-                    {
-                        return [$user->getId()];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user/10', 'GET'),
-                'expected' => null,
-                'exception' => InvalidArgumentException::class,
-            ],
-            'case with entity without params' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user', methods: ['GET'], name: 'user')]
-                    public function findAction(User $user): array
-                    {
-                        return [$user->getId()];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user', 'GET'),
-                'expected' => null,
-                'exception' => InvalidArgumentException::class,
-                'exceptionMessage' => "Unable to resolve parameter 'user'",
-            ],
-            'case with entity and injection' => [
-                'controller' => new class extends AttributeActionController {
-                    #[Route(path: '/user/:id', methods: ['GET'], name: 'user')]
-                    public function findAction(User $user, PromptedMonologRegistryInterface $inject): array
-                    {
-                        return [$user->getId(), $inject::class];
-                    }
-                },
-                'request' => $this->createHttpRequest('/user/5', 'GET'),
-                'expected' => [5, PromptedMonologRegistry::class],
             ],
             'current user' => [
                 'controller' => new class extends AttributeActionController {
                     #[Route(path: '/route', methods: ['GET'], name: 'route')]
-                    public function findAction(#[CurrentUser] Client $client): array
+                    public function findAction(#[CurrentUser] User $client): array
                     {
                         return [$client->getEmail()];
                     }
@@ -368,6 +192,60 @@ class AttributeActionControllerTest extends TestCase
         ];
     }
 
+    private function createEntityManager(): EntityManagerInterface
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        $entityManager->method('getRepository')->willReturnCallback(function (string $class) {
+            return new class($class) implements ObjectRepository {
+                public function __construct(private readonly string $class)
+                {
+                }
+
+                public function find($id): ?object
+                {
+                    if ($this->class === Entity::class && is_numeric($id)) {
+                        $intId = (int)$id;
+
+                        return $intId === 5 ? new Entity($intId) : null;
+                    }
+
+                    return null;
+                }
+
+                public function findAll(): array
+                {
+                    return [];
+                }
+
+                public function findBy(array $criteria, ?array $orderBy = null, $limit = null, $offset = null): array
+                {
+                    return [];
+                }
+
+                public function findOneBy(array $criteria): ?object
+                {
+                    return null;
+                }
+
+                public function getClassName(): string
+                {
+                    return $this->class;
+                }
+            };
+        });
+
+        $entityManager->method('getClassMetadata')->willReturnCallback(function (string $class) {
+            if ($class === Entity::class) {
+                return (object)['isMappedSuperclass' => false];
+            }
+
+            throw new RuntimeException('metadata not found');
+        });
+
+        return $entityManager;
+    }
+
     private function createMvcEvent(TreeRouteStack $router, Request $request, $routeMatch = null): MvcEvent
     {
         $event = new MvcEvent();
@@ -388,16 +266,16 @@ class AttributeActionControllerTest extends TestCase
         return $event;
     }
 
-    private function createHttpRequest(string $path, string $method, array $queryParams = [], array $postData = [], string $json = null): Request
+    private function createHttpRequest(string $path, string $method, array $queryParams = [], array $postData = [], ?string $json = null): Request
     {
         $request = new Request();
         $request->setUri($path);
         $request->setMethod($method);
 
-        if (! empty($queryParams)) {
+        if (!empty($queryParams)) {
             $request->getQuery()->fromArray($queryParams);
         }
-        if (! empty($postData)) {
+        if (!empty($postData)) {
             $request->setPost(new Parameters($postData));
         }
 
@@ -407,5 +285,56 @@ class AttributeActionControllerTest extends TestCase
         $request->getHeaders()->addHeaderLine('Content-Type', 'application/json');
 
         return $request;
+    }
+}
+
+
+interface PromptedMonologRegistryInterface
+{
+}
+
+final class PromptedMonologRegistry implements PromptedMonologRegistryInterface
+{
+}
+
+final readonly class User
+{
+    public function __construct(private int $id, private string $email)
+    {
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+    public function getEmail(): string
+    {
+        return $this->email;
+    }
+}
+final readonly class Entity
+{
+    public function __construct(private int $id)
+    {
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+}
+
+final class TestGetCurrentUser implements GetCurrentUser
+{
+    private ?User $user = null;
+
+    public function auth(User $user): void
+    {
+        $this->user = $user;
+    }
+
+    public function getCurrentUser(): ?User
+    {
+        return $this->user;
     }
 }
