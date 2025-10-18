@@ -9,6 +9,7 @@ use Laminas\Http\Exception\InvalidArgumentException;
 use LaminasAttributeController\ParameterResolverInterface;
 use LaminasAttributeController\ParameterValue;
 use LaminasAttributeController\ResolutionContext;
+use LaminasAttributeController\Security\CurrentUser;
 use ReflectionNamedType;
 use Throwable;
 
@@ -21,6 +22,10 @@ final readonly class FromRouteResolver implements ParameterResolverInterface
 
     public function resolve(ResolutionContext $context): ParameterValue
     {
+        if ($this->hasAttribute($context, CurrentUser::class)) {
+            return ParameterValue::notFound();
+        }
+
         $paramName = $context->parameter->getName();
 
         // If the parameter is a route parameter, return it
@@ -76,6 +81,17 @@ final readonly class FromRouteResolver implements ParameterResolverInterface
         } catch (Throwable $e) {
             return false; // if metadata is not found, it's not an entity
         }
+    }
+
+    private function hasAttribute(ResolutionContext $context, string $attributeClass): bool
+    {
+        foreach ($context->getAttributes() as $attribute) {
+            if ($attribute->getName() === $attributeClass) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function dynamicCast(string $type, $value)
