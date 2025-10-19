@@ -31,6 +31,11 @@ use LaminasAttributeController\Validation\QueryParam;
 use LaminasAttributeController\Validation\QueryParamResolver;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Tests\Stubs\Entity;
+use Tests\Stubs\StubService;
+use Tests\Stubs\StubServiceInterface;
+use Tests\Stubs\TestGetCurrentUser;
+use Tests\Stubs\User;
 use function get_class;
 
 class AttributeActionControllerTest extends TestCase
@@ -58,9 +63,9 @@ class AttributeActionControllerTest extends TestCase
         $currentUserProvider->auth(new User(1, 'test-auth@client.com'));
         $this->serviceManager->setService(GetCurrentUser::class, $currentUserProvider);
 
-        $logger = new PromptedMonologRegistry();
-        $this->serviceManager->setService(PromptedMonologRegistryInterface::class, $logger);
-        $this->serviceManager->setService(PromptedMonologRegistry::class, $logger);
+        $stubService = new StubService();
+        $this->serviceManager->setService(StubServiceInterface::class, $stubService);
+        $this->serviceManager->setService(StubService::class, $stubService);
 
 
         $resolver = new ActionParameterResolver(
@@ -157,13 +162,13 @@ class AttributeActionControllerTest extends TestCase
             'case with injection' => [
                 'controller' => new class extends AttributeActionController {
                     #[Route(path: '/logger', methods: ['GET'], name: 'logger')]
-                    public function logAction(PromptedMonologRegistryInterface $logger): array
+                    public function logAction(StubServiceInterface $service): array
                     {
-                        return [$logger::class];
+                        return [$service::class];
                     }
                 },
                 'request' => $this->createHttpRequest('/logger', 'GET'),
-                'expected' => [PromptedMonologRegistry::class],
+                'expected' => [StubService::class],
             ],
             'current user' => [
                 'controller' => new class extends AttributeActionController {
@@ -179,7 +184,7 @@ class AttributeActionControllerTest extends TestCase
             'current user without type' => [
                 'controller' => new class extends AttributeActionController {
                     #[Route(path: '/route', methods: ['GET'], name: 'route')]
-                    public function findAction(PromptedMonologRegistryInterface $inject, #[CurrentUser] $client): array
+                    public function findAction(StubServiceInterface $inject, #[CurrentUser] $client): array
                     {
                         return [$client->getEmail()];
                     }
@@ -285,56 +290,5 @@ class AttributeActionControllerTest extends TestCase
         $request->getHeaders()->addHeaderLine('Content-Type', 'application/json');
 
         return $request;
-    }
-}
-
-
-interface PromptedMonologRegistryInterface
-{
-}
-
-final class PromptedMonologRegistry implements PromptedMonologRegistryInterface
-{
-}
-
-final readonly class User
-{
-    public function __construct(private int $id, private string $email)
-    {
-    }
-
-    public function getId(): int
-    {
-        return $this->id;
-    }
-    public function getEmail(): string
-    {
-        return $this->email;
-    }
-}
-final readonly class Entity
-{
-    public function __construct(private int $id)
-    {
-    }
-
-    public function getId(): int
-    {
-        return $this->id;
-    }
-}
-
-final class TestGetCurrentUser implements GetCurrentUser
-{
-    private ?User $user = null;
-
-    public function auth(User $user): void
-    {
-        $this->user = $user;
-    }
-
-    public function getCurrentUser(): ?User
-    {
-        return $this->user;
     }
 }
