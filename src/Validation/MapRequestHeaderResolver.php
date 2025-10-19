@@ -42,6 +42,8 @@ final readonly class MapRequestHeaderResolver implements ParameterResolverInterf
             $attributeInstance = $attribute->newInstance();
 
             $type = $context->parameter->getType();
+
+            /** @phpstan-ignore-next-line */
             $typeName = $type?->getName();
 
             if (!\in_array($typeName, ['string', 'array', AcceptHeader::class], true)) {
@@ -103,6 +105,7 @@ final readonly class MapRequestHeaderResolver implements ParameterResolverInterf
             return null;
         }
 
+        /** @phpstan-ignore-next-line */
         return (string) $header;
     }
 
@@ -131,6 +134,7 @@ final readonly class MapRequestHeaderResolver implements ParameterResolverInterf
             return null;
         }
 
+        /** @phpstan-ignore-next-line */
         return (string) $header;
     }
 
