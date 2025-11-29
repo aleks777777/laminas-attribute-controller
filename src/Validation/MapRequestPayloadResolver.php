@@ -12,7 +12,11 @@ use LaminasAttributeController\ParameterResolverInterface;
 use LaminasAttributeController\ParameterValue;
 use LaminasAttributeController\ResolutionContext;
 use ReflectionNamedType;
+use Symfony\Component\Validator\Constraints\NotNull;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Validator\ConstraintViolation;
+use Symfony\Component\Validator\ConstraintViolationList;
+use TypeError;
 
 final readonly class MapRequestPayloadResolver implements ParameterResolverInterface
 {
@@ -49,7 +53,14 @@ final readonly class MapRequestPayloadResolver implements ParameterResolverInter
 
             Assertion::string($payload, 'Request content must be a string');
 
-            $value = $this->serializer->deserialize($payload, $context->parameter->getType()->getName(), 'json');
+            try {
+                $value = $this->serializer->deserialize($payload, $context->parameter->getType()->getName(), 'json');
+            } catch (TypeError $exception) {
+                if (str_contains($exception->getMessage(), 'Cannot assign null to property')) {
+                    $this->throwValidationExceptionFromNotNullableField($exception, $context);
+                }
+                throw $exception;
+            }
             $result = $this->validator->validate($value);
 
             if (count($result) > 0) {
@@ -61,4 +72,34 @@ final readonly class MapRequestPayloadResolver implements ParameterResolverInter
 
         return ParameterValue::notFound();
     }
+
+    // Handles object deserialization error when a null value is passed to a non-nullable property; converts the TypeError into an ApiSymfonyValidatorChainException (NotNull) with the correct property path for a consistent API validation error.
+    private function throwValidationExceptionFromNotNullableField(TypeError $exception, ResolutionContext $context): never
+    {
+        $propertyPath = $this->extractPropertyPathFromTypeError($exception) ?: $context->parameter->getName();
+
+        throw new ApiSymfonyValidatorChainException(
+            new ConstraintViolationList([
+                new ConstraintViolation(
+                    "This value should not be null",
+                    null,
+                    [],
+                    null,
+                    $propertyPath,
+                    null,
+                    code: NotNull::IS_NULL_ERROR
+                ),
+            ]),
+        );
+    }
+
+    private function extractPropertyPathFromTypeError(TypeError $exception): ?string
+    {
+        if (preg_match('/::\$(\w+)/', $exception->getMessage(), $matches) === 1) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
 }
