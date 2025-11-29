@@ -31,7 +31,7 @@ final class MapRequestHeaderResolverTest extends TestCase
 
     public function testThrowsWhenTypeIsUnsupported(): void
     {
-        $controller = new class {
+        $controller = new class () {
             public function action(#[MapRequestHeader] int $header): void
             {
             }
@@ -46,7 +46,7 @@ final class MapRequestHeaderResolverTest extends TestCase
     {
         $this->request->getHeaders()->addHeaderLine('user-agent', 'Symfony');
 
-        $controller = new class {
+        $controller = new class () {
             public function action(#[MapRequestHeader('user-agent')] string $userAgent): void
             {
             }
@@ -62,7 +62,7 @@ final class MapRequestHeaderResolverTest extends TestCase
     {
         $this->request->getHeaders()->addHeaderLine('accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8');
 
-        $controller = new class {
+        $controller = new class () {
             public function action(#[MapRequestHeader('accept')] array $accept): void
             {
             }
@@ -82,7 +82,7 @@ final class MapRequestHeaderResolverTest extends TestCase
     {
         $this->request->getHeaders()->addHeaderLine('accept-language', 'en-us,en;q=0.5');
 
-        $controller = new class {
+        $controller = new class () {
             public function action(#[MapRequestHeader('accept-language')] array $languages): void
             {
             }
@@ -100,7 +100,7 @@ final class MapRequestHeaderResolverTest extends TestCase
     {
         $this->request->getHeaders()->addHeaderLine('accept', 'text/html,application/xhtml+xml');
 
-        $controller = new class {
+        $controller = new class () {
             public function action(#[MapRequestHeader('accept')] AcceptHeader $accept): void
             {
             }
@@ -114,7 +114,7 @@ final class MapRequestHeaderResolverTest extends TestCase
 
     public function testUsesDefaultValueWhenHeaderMissing(): void
     {
-        $controller = new class {
+        $controller = new class () {
             public function action(#[MapRequestHeader('x-header')] string $header = 'fallback'): void
             {
             }
@@ -127,7 +127,7 @@ final class MapRequestHeaderResolverTest extends TestCase
 
     public function testAllowsNullableParameters(): void
     {
-        $controller = new class {
+        $controller = new class () {
             public function action(#[MapRequestHeader('x-header')] ?string $header): void
             {
             }
@@ -140,7 +140,7 @@ final class MapRequestHeaderResolverTest extends TestCase
 
     public function testThrowsWhenHeaderMissingAndNotNullable(): void
     {
-        $controller = new class {
+        $controller = new class () {
             public function action(#[MapRequestHeader('x-header')] string $header): void
             {
             }
@@ -154,7 +154,7 @@ final class MapRequestHeaderResolverTest extends TestCase
 
     public function testReturnsEmptyArrayWhenHeaderMissingForArrayType(): void
     {
-        $controller = new class {
+        $controller = new class () {
             public function action(#[MapRequestHeader('x-header')] array $headers): void
             {
             }

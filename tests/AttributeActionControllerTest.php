@@ -36,6 +36,7 @@ use Tests\Stubs\StubService;
 use Tests\Stubs\StubServiceInterface;
 use Tests\Stubs\TestGetCurrentUser;
 use Tests\Stubs\User;
+
 use function get_class;
 
 class AttributeActionControllerTest extends TestCase
@@ -112,7 +113,7 @@ class AttributeActionControllerTest extends TestCase
     {
         return [
             'case without parameters' => [
-                'controller' => new class extends AttributeActionController {
+                'controller' => new class () extends AttributeActionController {
                     #[Route(path: '/user', methods: ['GET'], name: 'user_index')]
                     public function indexAction(): array
                     {
@@ -123,7 +124,7 @@ class AttributeActionControllerTest extends TestCase
                 'expected' => ['status' => 'User created'],
             ],
             'case with query param' => [
-                'controller' => new class extends AttributeActionController {
+                'controller' => new class () extends AttributeActionController {
                     #[Route(path: '/user/filter', methods: ['GET'], name: 'user_filter')]
                     public function filterUserAction(#[QueryParam('filter')] ?string $filter = null): array
                     {
@@ -134,7 +135,7 @@ class AttributeActionControllerTest extends TestCase
                 'expected' => ['filter' => 'active'],
             ],
             'case with required query param' => [
-                'controller' => new class extends AttributeActionController {
+                'controller' => new class () extends AttributeActionController {
                     #[Route(path: '/user/filter', methods: ['GET'], name: 'user_filter')]
                     public function filterUserAction(#[QueryParam('filter', required: true)] string $filter): array
                     {
@@ -147,7 +148,7 @@ class AttributeActionControllerTest extends TestCase
                 'exceptionMessage' => "Query parameter 'filter' is required",
             ],
             'case with incorrect route (404)' => [
-                'controller' => new class extends AttributeActionController {
+                'controller' => new class () extends AttributeActionController {
                     #[Route(path: '/user', methods: ['GET'], name: 'user')]
                     public function filterUserAction(): array
                     {
@@ -160,7 +161,7 @@ class AttributeActionControllerTest extends TestCase
                 'exceptionMessage' => 'RouteMatch not found',
             ],
             'case with injection' => [
-                'controller' => new class extends AttributeActionController {
+                'controller' => new class () extends AttributeActionController {
                     #[Route(path: '/logger', methods: ['GET'], name: 'logger')]
                     public function logAction(StubServiceInterface $service): array
                     {
@@ -171,7 +172,7 @@ class AttributeActionControllerTest extends TestCase
                 'expected' => [StubService::class],
             ],
             'current user' => [
-                'controller' => new class extends AttributeActionController {
+                'controller' => new class () extends AttributeActionController {
                     #[Route(path: '/route', methods: ['GET'], name: 'route')]
                     public function findAction(#[CurrentUser] User $client): array
                     {
@@ -182,7 +183,7 @@ class AttributeActionControllerTest extends TestCase
                 'expected' => ['test-auth@client.com'],
             ],
             'current user without type' => [
-                'controller' => new class extends AttributeActionController {
+                'controller' => new class () extends AttributeActionController {
                     #[Route(path: '/route', methods: ['GET'], name: 'route')]
                     public function findAction(StubServiceInterface $inject, #[CurrentUser] $client): array
                     {
@@ -202,7 +203,7 @@ class AttributeActionControllerTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
         $entityManager->method('getRepository')->willReturnCallback(function (string $class) {
-            return new class($class) implements ObjectRepository {
+            return new class ($class) implements ObjectRepository {
                 public function __construct(private readonly string $class)
                 {
                 }

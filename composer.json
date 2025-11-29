@@ -19,8 +19,9 @@
   },
 
   "scripts": {
-    "cs": "./vendor/bin/php-cs-fixer fix src",
-    "stan": "./vendor/bin/phpstan"
+    "cs": "./vendor/bin/php-cs-fixer fix cs",
+    "stan": "./vendor/bin/phpstan",
+    "test": "./vendor/bin/phpunit -vvv"
   },
   "autoload": {
     "psr-4": {
